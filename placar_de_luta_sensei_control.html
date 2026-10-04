@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sensei Control - Placar de Artes Marciais & Jiu-Jitsu</title>
+    
+    <!-- Fonts Google -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,400;0,600;0,700;0,800;1,800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        digital: ['Orbitron', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            gold: '#EAAD28',
+                            blue: '#1A6BFF',
+                            red: '#E11D48',
+                            dark: '#05070C',
+                            card: '#0D1018',
+                            border: 'rgba(255, 255, 255, 0.08)'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-image: url("logo.jpeg");
+            background-position: center; /* Center the image */
+            background-repeat: no-repeat;
+            background-color: #000000;
+            color: #FFFFFF;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 🖼️ LOGO DE FUNDO CENTRALIZADA E ATRÁS DE TUDO (BACKGROUND) */
+        .page-bg-watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 85vw;
+            height: 85vh;
+            max-width: 650px;
+            max-height: 650px;
+            object-fit: contain;
+            pointer-events: none;
+            z-index: 0; /* Fica estritamente no fundo */
+            opacity: 0.35; /* Transparência ideal para não cobrir o placar */
+            filter: drop-shadow(0 0 30px rgba(0, 0, 0, 0.8));
+            transition: opacity 0.3s ease;
+        }
+
+        /* 🥊 JANELA PRINCIPAL DO PLACAR (SOBRE A LOGO) */
+        .scoreboard-card {
+            position: relative;
+            z-index: 10; /* Fica por cima da logo de fundo */
+            background-color: rgba(13, 16, 24, 0.82) !important; /* Vidro escuro semi-transparente */
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        /* Digital glow & scrollbars */
+        .digital-glow { text-shadow: 0 0 15px rgba(255, 255, 255, 0.4), 0 0 30px rgba(26, 107, 255, 0.3); }
+        .glow-red { text-shadow: 0 0 15px rgba(225, 29, 72, 0.5); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #05070C; }
+        ::-webkit-scrollbar-thumb { background: #1e293b5e; border-radius: 3px; }
+
+        .editable-input {
+            background: transparent;
+            border: none;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .editable-input:hover { background: rgba(255, 255, 255, 0.05); border-radius: 6px; }
+        .editable-input:focus { background: rgba(255, 255, 255, 0.1); border-radius: 6px; box-shadow: 0 0 0 2px rgba(234, 173, 40, 0.5); }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-2 sm:p-4 md:p-6 font-sans">
+
+    <!-- 🖼️ IMAGEM DA LOGO POSICIONADA FIXA NO FUNDO DE TUDO (Z-INDEX 0) -->
+    <img id="pageBgLogo" src="logo.jpeg" alt="Fundo Sensei Control" class="page-bg-watermark">
+
+    <!-- 🥊 JANELA / CONTAINER PRINCIPAL DO PLACAR (Z-INDEX 10) -->
+    <div class="scoreboard-card relative w-full max-w-6xl rounded-3xl border border-white/10 shadow-[0_30px_100px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col justify-between">
+        
+        <header class="relative z-10 grid grid-cols-1 sm:grid-cols-3 items-center gap-3 px-5 sm:px-8 py-4 border-b border-white/5 bg-black/20 backdrop-blur-md">
+            <!-- Logo e Marca -->
+            <div class="flex items-center gap-3 justify-center sm:justify-start">
+                <img id="headerLogo" src="logo.jpeg" alt="Sensei Control" class="w-8 h-8 rounded-lg object-contain bg-black/40 p-1 border border-white/10">
+                <div class="flex flex-col">
+                    <span class="font-black text-sm text-white italic tracking-wider flex items-center gap-0.5">
+                        Sensei<span class="text-brand-gold">_Helyo</span>
+                    </span>
+                    <span class="text-[9px] text-gray-400 font-bold tracking-widest uppercase">R.Victor System</span>
+                </div>
+            </div>
+
+            <!-- Título do Campeonato -->
+            <div class="justify-self-center w-full max-w-xs">
+                <input type="text" id="eventName" value="CAMPEONATO DE JIU-JITSU" class="editable-input w-full text-center text-gray-300 font-black text-xs uppercase tracking-[0.2em] py-1">
+            </div>
+
+            <!-- Botões de Ação do Header -->
+            <div class="flex items-center gap-2 justify-center sm:justify-end text-xs">
+                <button onclick="toggleMute()" id="muteBtn" type="button" class="p-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-gray-300" title="Ativar/Desativar Som">
+                    <i data-lucide="volume-2" class="w-4 h-4"></i>
+                </button>
+
+                <button onclick="openConfigModal()" type="button" class="p-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-gray-300 flex items-center gap-1.5 font-bold" title="Configurar Logo">
+                    <i data-lucide="image" class="w-4 h-4"></i>
+                    <span class="hidden md:inline text-[11px]">LOGO</span>
+                </button>
+
+                <button onclick="toggleFullscreen()" type="button" class="p-2 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition-colors text-gray-300 flex items-center gap-1.5 font-bold" title="Tela Cheia (F11)">
+                    <i data-lucide="maximize-2" class="w-4 h-4"></i>
+                    <span class="hidden lg:inline text-[10px] text-gray-400 font-normal">F11</span>
+                </button>
+            </div>
+        </header>
+
+        <main class="relative z-10 grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] items-center gap-4 lg:gap-6 px-3 sm:px-6 lg:px-8 py-5 my-auto overflow-x-hidden">
+            
+            <!-- ATLETA AZUL (ESQUERDA) -->
+            <section class="flex flex-col items-center lg:items-start gap-3 order-2 lg:order-1 w-full min-w-0">
+                <div class="flex items-center gap-2.5 w-full justify-center lg:justify-start">
+                    <span class="w-3.5 h-3.5 rounded-full bg-brand-blue shadow-[0_0_12px_rgba(26,107,255,0.8)] flex-shrink-0"></span>
+                    <input type="text" id="p1Name" value="ATLETA AZUL" class="editable-input text-center lg:text-left text-white font-black text-lg sm:text-xl md:text-2xl uppercase tracking-wide w-full max-w-[220px]">
+                </div>
+
+                <div class="flex gap-1.5 sm:gap-2.5 w-full max-w-[340px] justify-center lg:justify-start">
+                    <div onclick="addScore(1, 'pts', 1)" oncontextmenu="event.preventDefault(); addScore(1, 'pts', -1);" class="flex-1 min-w-0 group relative h-22 sm:h-26 md:h-28 bg-emerald-600/90 hover:bg-emerald-600 rounded-2xl flex flex-col items-center justify-center shadow-lg shadow-emerald-900/20 border border-emerald-400/30 cursor-pointer active:scale-95 transition-transform p-1">
+                        <span class="text-[8px] sm:text-[10px] font-extrabold text-white/80 uppercase tracking-wider mb-0.5 truncate max-w-full">Pontos</span>
+                        <span id="p1Pts" class="font-digital text-2xl sm:text-3xl md:text-4xl font-black text-white drop-shadow">0</span>
+                        <button onclick="event.stopPropagation(); addScore(1, 'pts', -1);" type="button" class="absolute bottom-1 right-1 w-5 h-5 rounded bg-black/40 hover:bg-black/70 text-white/90 text-xs font-black flex items-center justify-center border border-white/10" title="Subtrair -1">−</button>
+                    </div>
+
+                    <div onclick="addScore(1, 'adv', 1)" oncontextmenu="event.preventDefault(); addScore(1, 'adv', -1);" class="flex-1 min-w-0 group relative h-22 sm:h-26 md:h-28 bg-yellow-500/90 hover:bg-yellow-500 rounded-2xl flex flex-col items-center justify-center shadow-lg shadow-yellow-900/20 border border-yellow-300/30 cursor-pointer active:scale-95 transition-transform p-1">
+                        <span class="text-[8px] sm:text-[10px] font-extrabold text-black/80 uppercase tracking-wider mb-0.5 truncate max-w-full">Vantagem</span>
+                        <span id="p1Adv" class="font-digital text-2xl sm:text-3xl md:text-4xl font-black text-black drop-shadow">0</span>
+                        <button onclick="event.stopPropagation(); addScore(1, 'adv', -1);" type="button" class="absolute bottom-1 right-1 w-5 h-5 rounded bg-black/40 hover:bg-black/70 text-white/90 text-xs font-black flex items-center justify-center border border-white/10" title="Subtrair -1">−</button>
+                    </div>
+
+                    <div onclick="addScore(1, 'pen', 1)" oncontextmenu="event.preventDefault(); addScore(1, 'pen', -1);" class="flex-1 min-w-0 group relative h-22 sm:h-26 md:h-28 bg-rose-600/90 hover:bg-rose-600 rounded-2xl flex flex-col items-center justify-center shadow-lg shadow-rose-900/20 border border-rose-400/30 cursor-pointer active:scale-95 transition-transform p-1">
+                        <span class="text-[8px] sm:text-[10px] font-extrabold text-white/80 uppercase tracking-wider mb-0.5 truncate max-w-full">Falta</span>
+                        <span id="p1Pen" class="font-digital text-2xl sm:text-3xl md:text-4xl font-black text-white drop-shadow">0</span>
+                        <button onclick="event.stopPropagation(); addScore(1, 'pen', -1);" type="button" class="absolute bottom-1 right-1 w-5 h-5 rounded bg-black/40 hover:bg-black/70 text-white/90 text-xs font-black flex items-center justify-center border border-white/10" title="Subtrair -1">−</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CRONÔMETRO CENTRAL -->
+            <section class="flex flex-col items-center justify-center order-1 lg:order-2 w-full max-w-xs sm:max-w-sm mx-auto">
+                <div class="w-full flex flex-col items-center mb-2">
+                    <input type="text" id="weightCategory" value="PESO MÉDIO — ADULTO" class="editable-input text-center text-gray-400 text-[11px] font-semibold uppercase tracking-widest w-full">
+                    <input type="text" id="matchStage" value="FINAL DE CAMPEONATO" class="editable-input text-center text-brand-gold text-xs font-black uppercase tracking-[0.2em] w-full mt-0.5">
+                </div>
+
+                <div id="statusBadge" class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 bg-white/5 border border-white/10 px-4 py-1 rounded-full mb-3 transition-all flex items-center gap-1.5">
+                    <span id="statusDot" class="w-2 h-2 rounded-full bg-yellow-500"></span>
+                    <span id="statusText">⏸ PRONTO</span>
+                </div>
+
+                <div class="relative bg-black/90 border border-white/10 rounded-3xl p-4 sm:p-6 shadow-[inset_0_2px_15px_rgba(0,0,0,0.9)] w-full flex flex-col items-center justify-center">
+                    <div id="timerDisplay" class="font-digital text-6xl sm:text-7xl md:text-8xl font-black tracking-widest text-white digital-glow transition-all">
+                        05:00
+                    </div>
+
+                    <div class="w-full h-1.5 bg-white/10 rounded-full mt-4 overflow-hidden">
+                        <div id="progressBar" class="h-full bg-brand-blue transition-all duration-300 w-full"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ATLETA BRANCO (DIREITA) -->
+            <section class="flex flex-col items-center lg:items-end gap-3 order-3 w-full min-w-0">
+                <div class="flex items-center gap-2.5 w-full justify-center lg:justify-end">
+                    <input type="text" id="p2Name" value="ATLETA BRANCO" class="editable-input text-center lg:text-right text-white font-black text-lg sm:text-xl md:text-2xl uppercase tracking-wide w-full max-w-[220px]">
+                    <span class="w-3.5 h-3.5 rounded-full bg-gray-200 shadow-[0_0_12px_rgba(255,255,255,0.8)] flex-shrink-0"></span>
+                </div>
+
+                <div class="flex gap-1.5 sm:gap-2.5 w-full max-w-[340px] justify-center lg:justify-end">
+                    <div onclick="addScore(2, 'pts', 1)" oncontextmenu="event.preventDefault(); addScore(2, 'pts', -1);" class="flex-1 min-w-0 group relative h-22 sm:h-26 md:h-28 bg-emerald-600/90 hover:bg-emerald-600 rounded-2xl flex flex-col items-center justify-center shadow-lg shadow-emerald-900/20 border border-emerald-400/30 cursor-pointer active:scale-95 transition-transform p-1">
+                        <span class="text-[8px] sm:text-[10px] font-extrabold text-white/80 uppercase tracking-wider mb-0.5 truncate max-w-full">Pontos</span>
+                        <span id="p2Pts" class="font-digital text-2xl sm:text-3xl md:text-4xl font-black text-white drop-shadow">0</span>
+                        <button onclick="event.stopPropagation(); addScore(2, 'pts', -1);" type="button" class="absolute bottom-1 right-1 w-5 h-5 rounded bg-black/40 hover:bg-black/70 text-white/90 text-xs font-black flex items-center justify-center border border-white/10" title="Subtrair -1">−</button>
+                    </div>
+
+                    <div onclick="addScore(2, 'adv', 1)" oncontextmenu="event.preventDefault(); addScore(2, 'adv', -1);" class="flex-1 min-w-0 group relative h-22 sm:h-26 md:h-28 bg-yellow-500/90 hover:bg-yellow-500 rounded-2xl flex flex-col items-center justify-center shadow-lg shadow-yellow-900/20 border border-yellow-300/30 cursor-pointer active:scale-95 transition-transform p-1">
+                        <span class="text-[8px] sm:text-[10px] font-extrabold text-black/80 uppercase tracking-wider mb-0.5 truncate max-w-full">Vantagem</span>
+                        <span id="p2Adv" class="font-digital text-2xl sm:text-3xl md:text-4xl font-black text-black drop-shadow">0</span>
+                        <button onclick="event.stopPropagation(); addScore(2, 'adv', -1);" type="button" class="absolute bottom-1 right-1 w-5 h-5 rounded bg-black/40 hover:bg-black/70 text-white/90 text-xs font-black flex items-center justify-center border border-white/10" title="Subtrair -1">−</button>
+                    </div>
+
+                    <div onclick="addScore(2, 'pen', 1)" oncontextmenu="event.preventDefault(); addScore(2, 'pen', -1);" class="flex-1 min-w-0 group relative h-22 sm:h-26 md:h-28 bg-rose-600/90 hover:bg-rose-600 rounded-2xl flex flex-col items-center justify-center shadow-lg shadow-rose-900/20 border border-rose-400/30 cursor-pointer active:scale-95 transition-transform p-1">
+                        <span class="text-[8px] sm:text-[10px] font-extrabold text-white/80 uppercase tracking-wider mb-0.5 truncate max-w-full">Falta</span>
+                        <span id="p2Pen" class="font-digital text-2xl sm:text-3xl md:text-4xl font-black text-white drop-shadow">0</span>
+                        <button onclick="event.stopPropagation(); addScore(2, 'pen', -1);" type="button" class="absolute bottom-1 right-1 w-5 h-5 rounded bg-black/40 hover:bg-black/70 text-white/90 text-xs font-black flex items-center justify-center border border-white/10" title="Subtrair -1">−</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="relative z-10 grid grid-cols-1 lg:grid-cols-3 gap-3 px-4 sm:px-8 py-4 border-t border-white/5 bg-black/20 backdrop-blur-md">
+            <div class="flex items-center justify-center lg:justify-start">
+                <div class="flex flex-wrap items-center justify-center gap-1 sm:gap-1.5">
+                    <button onclick="addScore(1, 'pts', -4)" type="button" class="px-2 sm:px-2.5 py-1.5 rounded-lg border border-red-500/40 bg-red-500/10 text-red-400 font-extrabold text-xs hover:bg-red-500/20 active:scale-95 transition">-4</button>
+                    <button onclick="addScore(1, 'pts', -3)" type="button" class="px-2 sm:px-2.5 py-1.5 rounded-lg border border-red-500/40 bg-red-500/10 text-red-400 font-extrabold text-xs hover:bg-red-500/20 active:scale-95 transition">-3</button>
+                    <button onclick="addScore(1, 'pts', -2)" type="button" class="px-2 sm:px-2.5 py-1.5 rounded-lg border border-red-500/40 bg-red-500/10 text-red-400 font-extrabold text-xs hover:bg-red-500/20 active:scale-95 transition">-2</button>
+                    <div class="h-4 w-px bg-white/10 mx-0.5"></div>
+                    <button onclick="addScore(1, 'pts', 2)" type="button" class="px-2.5 sm:px-3 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/15 text-emerald-400 font-black text-xs hover:bg-emerald-500/25 active:scale-95 transition">+2</button>
+                    <button onclick="addScore(1, 'pts', 3)" type="button" class="px-2.5 sm:px-3 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/15 text-emerald-400 font-black text-xs hover:bg-emerald-500/25 active:scale-95 transition">+3</button>
+                    <button onclick="addScore(1, 'pts', 4)" type="button" class="px-2.5 sm:px-3 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/15 text-emerald-400 font-black text-xs hover:bg-emerald-500/25 active:scale-95 transition">+4</button>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center justify-center gap-2.5">
+                <div class="flex items-center gap-2">
+                    <button id="startPauseBtn" onclick="toggleTimer()" type="button" class="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-900/30 flex items-center gap-2 active:scale-95 transition">
+                        <i id="startPauseIcon" data-lucide="play" class="w-4 h-4 fill-white"></i>
+                        <span id="startPauseText">INICIAR</span>
+                    </button>
+
+                    <button onclick="resetTimer()" type="button" class="p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 active:scale-95 transition" title="Resetar Cronômetro">
+                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    </button>
+
+                    <button onclick="openTimeModal()" type="button" class="p-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-gray-300 active:scale-95 transition" title="Definir Tempo Personalizado">
+                        <i data-lucide="settings-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-1.5">
+                    <button onclick="setTimerPreset(300)" type="button" class="preset-btn px-3 py-1 rounded-lg border border-white/10 bg-white/5 text-gray-400 text-xs font-bold hover:text-white transition">5 min</button>
+                    <button onclick="setTimerPreset(360)" type="button" class="preset-btn px-3 py-1 rounded-lg border border-white/10 bg-white/5 text-gray-400 text-xs font-bold hover:text-white transition">6 min</button>
+                    <button onclick="setTimerPreset(480)" type="button" class="preset-btn px-3 py-1 rounded-lg border border-white/10 bg-white/5 text-gray-400 text-xs font-bold hover:text-white transition">8 min</button>
+                    <button onclick="setTimerPreset(600)" type="button" class="preset-btn px-3 py-1 rounded-lg border border-white/10 bg-white/5 text-gray-400 text-xs font-bold hover:text-white transition">10 min</button>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-center lg:justify-end">
+                <div class="flex flex-wrap items-center justify-center gap-1 sm:gap-1.5">
+                    <button onclick="addScore(2, 'pts', -4)" type="button" class="px-2 sm:px-2.5 py-1.5 rounded-lg border border-red-500/40 bg-red-500/10 text-red-400 font-extrabold text-xs hover:bg-red-500/20 active:scale-95 transition">-4</button>
+                    <button onclick="addScore(2, 'pts', -3)" type="button" class="px-2 sm:px-2.5 py-1.5 rounded-lg border border-red-500/40 bg-red-500/10 text-red-400 font-extrabold text-xs hover:bg-red-500/20 active:scale-95 transition">-3</button>
+                    <button onclick="addScore(2, 'pts', -2)" type="button" class="px-2 sm:px-2.5 py-1.5 rounded-lg border border-red-500/40 bg-red-500/10 text-red-400 font-extrabold text-xs hover:bg-red-500/20 active:scale-95 transition">-2</button>
+                    <div class="h-4 w-px bg-white/10 mx-0.5"></div>
+                    <button onclick="addScore(2, 'pts', 2)" type="button" class="px-2.5 sm:px-3 py-1.5 rounded-lg border border-gray-400/40 bg-gray-400/15 text-gray-200 font-black text-xs hover:bg-gray-400/25 active:scale-95 transition">+2</button>
+                    <button onclick="addScore(2, 'pts', 3)" type="button" class="px-2.5 sm:px-3 py-1.5 rounded-lg border border-gray-400/40 bg-gray-400/15 text-gray-200 font-black text-xs hover:bg-gray-400/25 active:scale-95 transition">+3</button>
+                    <button onclick="addScore(2, 'pts', 4)" type="button" class="px-2.5 sm:px-3 py-1.5 rounded-lg border border-gray-400/40 bg-gray-400/15 text-gray-200 font-black text-xs hover:bg-gray-400/25 active:scale-95 transition">+4</button>
+                </div>
+            </div>
+        </footer>
+
+        <div class="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-2 px-6 py-2.5 bg-black/40 border-t border-white/5 text-[10px] text-gray-500">
+            <span>Dica: Pressione <b>[Espaço]</b> para Iniciar/Pausar • Clique direito no placar para subtrair</span>
+            <button onclick="openResetModal()" type="button" class="text-rose-400 hover:text-rose-300 font-bold uppercase tracking-wider transition cursor-pointer px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 flex items-center gap-1.5 active:scale-95">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                Zerar Tudo
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAIS -->
+    <div id="resetModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-brand-card border border-brand-border rounded-2xl w-full max-w-sm p-6 shadow-2xl relative text-center">
+            <div class="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center mx-auto mb-3">
+                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-base font-bold text-white mb-1">Zerar Placar e Cronômetro?</h3>
+            <p class="text-xs text-gray-400 mb-5">Esta ação irá zerar os pontos, vantagens e penalidades de ambos os atletas, e reiniciar o tempo.</p>
+            <div class="flex items-center justify-center gap-3">
+                <button onclick="closeResetModal()" type="button" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-gray-300 transition">Cancelar</button>
+                <button onclick="confirmResetAll()" type="button" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition">Sim, Zerar Tudo</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="timeModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-brand-card border border-brand-border rounded-2xl w-full max-w-sm p-6 shadow-2xl relative">
+            <h3 class="text-base font-bold text-white mb-2 flex items-center gap-2">
+                <i data-lucide="clock" class="w-5 h-5 text-brand-gold"></i>
+                Definir Tempo de Luta
+            </h3>
+            <p class="text-xs text-gray-400 mb-4">Informe a duração total da luta em minutos:</p>
+            <input type="number" id="customMinutesInput" min="1" max="60" value="5" class="w-full bg-black/50 border border-white/10 rounded-xl p-3 text-sm text-white font-bold outline-none focus:border-brand-gold text-center mb-5">
+            <div class="flex items-center justify-end gap-2">
+                <button onclick="closeTimeModal()" type="button" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-bold text-gray-300">Cancelar</button>
+                <button onclick="saveCustomTime()" type="button" class="px-4 py-2 rounded-xl bg-brand-gold hover:bg-amber-400 text-black text-xs font-bold">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="configModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-brand-card border border-brand-border rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <i data-lucide="image" class="w-5 h-5 text-brand-gold"></i>
+                Personalizar Logo & Marca D'água
+            </h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1">Opacidade da Marca D'água (<span id="opacityVal">35%</span>)</label>
+                    <input type="range" id="logoOpacityInput" min="0" max="0.8" step="0.05" value="0.35" oninput="updateLogoOpacity(this.value)" class="w-full accent-brand-gold">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1">URL da Imagem da Logo</label>
+                    <input type="text" id="logoUrlInput" placeholder="logo.jpeg" class="w-full bg-black/50 border border-white/10 rounded-lg p-2.5 text-xs text-white outline-none focus:border-brand-gold">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 mb-1">Ou Carregar Imagem Local</label>
+                    <input type="file" id="logoFileInput" accept="image/*" onchange="handleLogoUpload(event)" class="w-full text-xs text-gray-400 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-gold file:text-black hover:file:bg-amber-400 cursor-pointer">
+                </div>
+            </div>
+            <div class="flex items-center justify-end gap-3 mt-6">
+                <button onclick="closeConfigModal()" type="button" class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold text-gray-300">Cancelar</button>
+                <button onclick="saveLogoConfig()" type="button" class="px-4 py-2 rounded-lg bg-brand-gold hover:bg-amber-400 text-black text-xs font-bold">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let totalTime = 300;
+        let timeRemaining = 300;
+        let timerInterval = null;
+        let isRunning = false;
+        let isMuted = false;
+
+        const scores = {
+            1: { pts: 0, adv: 0, pen: 0 },
+            2: { pts: 0, adv: 0, pen: 0 }
+        };
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playGongSound() {
+            if (isMuted) return;
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, audioCtx.currentTime); 
+                osc.frequency.exponentialRampToValueAtTime(110, audioCtx.currentTime + 1.2); 
+                gain.gain.setValueAtTime(1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1.5);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 1.5);
+            } catch(e) {}
+        }
+
+        function playBeep() {
+            if (isMuted) return;
+            try {
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.value = 800;
+                gain.gain.value = 0.1;
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            } catch(e) {}
+        }
+
+        function addScore(player, type, amount) {
+            if (!scores[player]) return;
+            scores[player][type] = Math.max(0, scores[player][type] + amount);
+            const capType = type.charAt(0).toUpperCase() + type.slice(1);
+            const el = document.getElementById(`p${player}${capType}`);
+            if (el) el.innerText = scores[player][type];
+            playBeep();
+        }
+
+        function updateDisplay() {
+            const minutes = Math.floor(timeRemaining / 60);
+            const seconds = timeRemaining % 60;
+            const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            const timerDisplay = document.getElementById('timerDisplay');
+            timerDisplay.innerText = formattedTime;
+
+            const percent = (timeRemaining / totalTime) * 100;
+            document.getElementById('progressBar').style.width = `${percent}%`;
+
+            if (timeRemaining <= 30 && isRunning) {
+                timerDisplay.classList.add('text-rose-500', 'glow-red');
+            } else {
+                timerDisplay.classList.remove('text-rose-500', 'glow-red');
+            }
+        }
+
+        function toggleTimer() {
+            if (isRunning) pauseTimer(); else startTimer();
+        }
+
+        function startTimer() {
+            if (timeRemaining <= 0) return;
+            isRunning = true;
+            document.getElementById('startPauseBtn').className = "px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-amber-900/30 flex items-center gap-2 active:scale-95 transition";
+            document.getElementById('startPauseText').innerText = "PAUSAR";
+            document.getElementById('startPauseIcon').setAttribute('data-lucide', 'pause');
+            lucide.createIcons();
+            document.getElementById('statusDot').className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+            document.getElementById('statusText').innerText = "▶ EM ANDAMENTO";
+
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+                updateDisplay();
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    timerFinished();
+                }
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            isRunning = false;
+            clearInterval(timerInterval);
+            document.getElementById('startPauseBtn').className = "px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-widest shadow-lg shadow-emerald-900/30 flex items-center gap-2 active:scale-95 transition";
+            document.getElementById('startPauseText').innerText = "CONTINUAR";
+            document.getElementById('startPauseIcon').setAttribute('data-lucide', 'play');
+            lucide.createIcons();
+            document.getElementById('statusDot').className = "w-2 h-2 rounded-full bg-yellow-500";
+            document.getElementById('statusText').innerText = "⏸ PAUSADO";
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            timeRemaining = totalTime;
+            document.getElementById('startPauseText').innerText = "INICIAR";
+            document.getElementById('statusText').innerText = "⏸ PRONTO";
+            updateDisplay();
+        }
+
+        function timerFinished() {
+            pauseTimer();
+            document.getElementById('statusDot').className = "w-2 h-2 rounded-full bg-rose-500";
+            document.getElementById('statusText').innerText = "⏹ TEMPO FINALIZADO";
+            playGongSound();
+        }
+
+        function setTimerPreset(seconds) {
+            totalTime = seconds;
+            resetTimer();
+        }
+
+        function openResetModal() { document.getElementById('resetModal').classList.remove('hidden'); }
+        function closeResetModal() { document.getElementById('resetModal').classList.add('hidden'); }
+
+        function confirmResetAll() {
+            scores[1] = { pts: 0, adv: 0, pen: 0 };
+            scores[2] = { pts: 0, adv: 0, pen: 0 };
+            ['pts', 'adv', 'pen'].forEach(type => {
+                const capType = type.charAt(0).toUpperCase() + type.slice(1);
+                const el1 = document.getElementById(`p1${capType}`);
+                const el2 = document.getElementById(`p2${capType}`);
+                if (el1) el1.innerText = '0';
+                if (el2) el2.innerText = '0';
+            });
+            resetTimer();
+            closeResetModal();
+        }
+
+        function openTimeModal() {
+            document.getElementById('timeModal').classList.remove('hidden');
+            document.getElementById('customMinutesInput').value = Math.floor(totalTime / 60);
+        }
+        function closeTimeModal() { document.getElementById('timeModal').classList.add('hidden'); }
+
+        function saveCustomTime() {
+            const minutes = parseInt(document.getElementById('customMinutesInput').value);
+            if (!isNaN(minutes) && minutes > 0) setTimerPreset(minutes * 60);
+            closeTimeModal();
+        }
+
+        function openConfigModal() { document.getElementById('configModal').classList.remove('hidden'); }
+        function closeConfigModal() { document.getElementById('configModal').classList.add('hidden'); }
+
+        function updateLogoOpacity(val) {
+            document.getElementById('opacityVal').innerText = `${Math.round(val * 100)}%`;
+            document.getElementById('pageBgLogo').style.opacity = val;
+        }
+
+        function handleLogoUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const src = event.target.result;
+                    document.getElementById('pageBgLogo').src = src;
+                    document.getElementById('headerLogo').src = src;
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function saveLogoConfig() {
+            const url = document.getElementById('logoUrlInput').value.trim();
+            if (url) {
+                document.getElementById('pageBgLogo').src = url;
+                document.getElementById('headerLogo').src = url;
+            }
+            closeConfigModal();
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            const muteBtn = document.getElementById('muteBtn');
+            muteBtn.innerHTML = isMuted ? '<i data-lucide="volume-x" class="w-4 h-4 text-rose-400"></i>' : '<i data-lucide="volume-2" class="w-4 h-4"></i>';
+            lucide.createIcons();
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (document.activeElement.tagName === 'INPUT') return;
+            if (e.code === 'Space') {
+                e.preventDefault();
+                toggleTimer();
+            }
+        });
+
+        window.onload = function() {
+            lucide.createIcons();
+            updateDisplay();
+        };
+    </script>
+</body>
+</html>
